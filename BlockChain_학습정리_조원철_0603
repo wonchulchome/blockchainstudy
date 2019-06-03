@@ -1,0 +1,650 @@
+학습 정리
+
+팀
+BeatCoin
+구성원
+조원철, 임현아
+
+일정
+발제자
+주제
+6일차
+( 6 / 3 )
+
+조원철
+
+
+2.3 지갑(Smart Wallet) 만들기
+주요 내용 요약
+1. 지갑 준비하기
+
+       ① 암호화폐상에서 코인의 소유권은 블록체인 상에서의 트랜잭션으로 이루어 진다. 모든 참여자들은 펀드를 받고 보낼 수 있는 하나의 주소를 지니고 있다. 지갑의 기본 형태로 이러한 주소들을 담을 수 있는데, 이 대부분의 지갑들은 블록체인 하에서 새로운 트랜잭션을 생성할 수 있는 소프트웨어 이기도 하다.
+
+       ② public key는 우리의 주소 역할을 한다. 이 public key를 대금을 받는 용도로 공유하는 것도 가능하다. 우리의 private key는 우리의 트랜잭션에 싸인을 하는 기능을 수행한다. 그 private key의 주인 외에는 아무도 noobcoin을 사용할 수 없도록 한다. 그렇기 때문에 사용자는 private key를 비밀스럽게 유지해야 한다. 우리는 우리의 public key를 트랜잭션에 따라서 보내고, 이 public key는 우리의 시그니쳐가 유효한지 여부를 확인할 뿐만 아니라 데이터를 다른사람이 건드렸는지 확인한다.
+
+2. Transactions & Signatures
+
+       ① 각 트랜잭션은 아래에 해당되는 데이터를 지니고 있음.
+계좌를 보내는 사람의 public key(address)
+계좌를 받는 사람의 public key(address)
+이체되는 계좌의 수량 혹은 금액
+보내는 사람이 실제로 계좌를 가지고 있는지를 증명할 이전 트랜잭션들의 레퍼런스 인풋
+트랜잭션에서 그에 해당하는 주소가 받은 금액을 보여주는 아웃풋(추후 트랜잭션에서 인풋값이 되는 값)
+암호화된 시그니쳐, 이 암호화된 서명을 통해서 주소의 실제 주인이 트랜잭션을 통해 돈을 보내는지 확인할 수 있다. 또한, 데이터에 어떤 변화가 생겼는지도 알 수 있다.(예를 들면, 제 3자가 보내는 금액을 바꾸는 것을 방지하는 역할)
+
+       ② 시그니쳐의 목적, 작동
+Signatures 이 블락체인에서 두가지 중요한 역할을 수행한다.
+첫번째 역할을 바로 실제 코인의 오너만이 그 코인을 사용할 수 있도록 허락해주는 역할.
+두번째 역할은 바로 새로운 블럭이 생성되기 전(시작 지점에서) 이미 접수된 트랜잭션에 대해서 다른 사람들이 수정하지 못하도록 방지하는 역할.
+
+3. Testing the Wallets and Signatures
+
+       ① Input & Outputs 1 : How crypto currency is owned…
+우리가 지갑이라고 하지만 실제로는 지갑에 코인을 직접적으로 더하거나 빼면서 돈을 쌓아 놓지 않는다. 트랜잭션의 결과로 생성된 특정 output을 추적해서 본인이 쓸 수 있는 코인을 알아냄.
+앞에서 Bob과 Sally로 예시를 들었다. Bob은 Sally에게 2 Noob 코인을 보낼 때, Bob의 지갑에는 2 코인이 있는 것이 아니라 Bob의 이 전 트랜잭션의 output이 쌓여 있었던 것이다. Bob의 지갑은 트랜잭션의 output들을 추적해서 Bob이 2코인 만큼 보낼 코인이 있는지 확인.
+비트코인에서는 이 특수한 output을 가리켜 사용하지 않은 거래의 출력(Unspent Transaction Outputs)라고 하며 UTXO라고 줄여쓴다. 결국 새로운 트랜잭션을 일으킨다는 것은, UTXO를 추적하여 이전 거래의 output 값을 새로운 트랜잭션의 input으로 사용.
+
+
+       ② Inputs & Outputs 2 : Processing the transaction…
+
+한 블록에 여러 개의 트랜잭션이 모이게 되고, 시간이 지날수록 블록체인의 길이는 점점 길어지게 된다. 길어지면 길어질수록 UTXO를 찾는데 걸리는 시간 또한 길어진다. 이 문제를 해결하기 위해서 UTXO의 collection을 만듦.
+다음은, 트랜잭션을 처리하는 방식이다. 특정 트랜잭션이 유효한 트랜잭션인지, 무결한 트랜잭션인지 검증하는 과정이 있어야 한다. 트랜잭션은 거래 송신자가 본인의 개인키를 가지고 데이터를 암호화 하고, 송신자의 공개키로만 풀 수 있는 구조다. 이 역할은 verifySignature 메서드가 하고 있고, 이제 거래에 필요한 다른 몇 가지 과정을 넣어 줄 차례이다. 이 과정을 Transaction 클래스 안의 processTransaction이라는 메서드를 통해서 이루어진다.
+트랜잭션을 처리했으니 이제 지갑에서 트랜잭션을 만들어 낼 차례이다. 보통 우리가 거래를 할 때에는 수중에 돈이 얼마 있는지 확인하고, 계산할 수 있는 돈이 있을 때 거래를 한다. 이 과정은 나의 UTXO들을 확인하는 절차이며 UTXOs(코드의 HashMap)의 list를 보면서 나의 UTXO가 있는지 확인하는 과정이 필요.
+코드로 되어 있을 뿐, 우리가 실세계에서 거래를 하는 방식과 동일.
+getBalance 메서드로 쓸 수 있는 돈(코인)이 얼마 있는지 확인 후, sendFunds 메서드로 거래를 일으킴.
+
+4. Adding transactions to our blocks
+
+       ① 트랜잭션을 구현하는 것은 완성되었고 이제 이것을 우리 블록체인 안에 넣기 위한 구현단계가 남아있다. 앞서 트랜잭션에 필요한 데이터들을 하나의 ArrayList로 넣었다. 만약에 하나의 블록 안에 많은 개수(ex> 1000개)의 트랜잭션이 들어가면 어떻게 될까? 당연히 블록의 크기는 커질 것이고, 특정 트랜잭션을 찾기위한 시간은 길어질 것이다. 이를 위해 머클트리 자료구조가 쓰임.
+
+머클트리의 주요 특징
+이진트리(binary tree)와 유사하다.
+거래가 아무리 많아도 root node의 크기는 32비트이다.
+leaf node만이 transaction의 정보를 가진다.
+parent node는 child node들의 hash값을 합친 후 다시 hashing한 결과 값이다.
+
+
+5. The Grand Finale(In the beginning there was noobchain)
+
+       ① 이제 지갑에서 트랜잭션을 발생시키고, 블록에 포함되는 과정을 테스트해 볼 시간이다. 실제 비트코인 채굴과정에서 채굴자들이 어떤 트랜잭션을 블록에 포함 시킬지에 대한 기준이 있고 코인이 발행되는 메커니즘도 있다. 하지만 우리가 하고 있는 프로젝트에서는 첫 블록(genesis block)에서만 코인을 발행시킴.
+
+
+
+
+
+
+
+code
+
+<block class>
+
+package noobchain;
+import java.util.ArrayList;
+import java.util.Date;
+
+public class Block {
+	
+	public String hash;
+	public String previousHash;
+	public String merkleRoot;
+	public ArrayList<Transaction> transactions = new ArrayList<Transaction>(); //out data will be a simple message.
+	//private String data; //our data will be a simple message.
+	private long timeStamp; //as number of milliseconds since 1/1/1970.
+	private int nonce;
+	
+	//Block Constructor.  
+	/*public Block(String data,String previousHash ) {
+		this.data = data;
+		this.previousHash = previousHash;
+		this.timeStamp = new Date().getTime();
+		this.hash = calculateHash(); //Making sure we do this after we set the other values.
+	}*/
+	
+	public Block(String previousHash) {
+		this.previousHash = previousHash;
+		this.timeStamp = new Date().getTime();
+		this.hash = calculateHash();
+	}
+	
+	//Calculate new hash based on blocks contents
+	public String calculateHash() {
+		String calculatedhash = StringUtil.applySha256( 
+				previousHash +
+				Long.toString(timeStamp) +
+				Integer.toString(nonce) + 
+				merkleRoot
+				);
+		return calculatedhash;
+	}
+	
+	public void mineBlock(int difficulty) {
+		merkleRoot = StringUtil.getMerkleRoot(transactions);
+		//String target = new String(new char[difficulty]).replace('\0', '0'); //Create a string with difficulty * "0" 
+		String target = StringUtil.getDificultyString(difficulty);
+		while(!hash.substring( 0, difficulty).equals(target)) {
+			nonce ++;
+			hash = calculateHash();
+		}
+		System.out.println("Block Mined!!! : " + hash);
+	}
+	
+	//Add transactions to this block
+	public boolean addTransaction(Transaction transaction) {
+		//process transaction and check if valid, unless block is genesis block then ignore.
+		if(transaction == null) return false;
+		if((previousHash != "0")) {
+			if((transaction.processTransaction() != true)) {
+				System.out.println("Transaction failed to process. Discarded.");
+				return false;
+			}
+		}
+		transactions.add(transaction);
+		System.out.println("Transaction Successfully added to Block");
+		return true;
+	}
+}
+
+
+<NoobChain class>
+
+package noobchain;
+import java.security.Security;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import com.google.gson.GsonBuilder;
+
+import noobchain.Wallet;
+
+public class NoobChain {
+	
+	public static ArrayList<Block> blockchain = new ArrayList<Block>();
+	public static HashMap<String, TransactionOutput> UTXOs = new HashMap<String, TransactionOutput>();//list of all unspent transactions.
+	
+	public static int difficulty = 5;
+	public static float minimumTransaction = 0.1f;
+	public static Wallet walletA;
+	public static Wallet walletB;
+	public static Transaction genesisTransaction;
+	
+	public static void main(String[] args) {	
+		//add our blocks to the blockchain ArrayList:
+		
+		/*
+		blockchain.add(new Block("Hi im the first block", "0"));
+		System.out.println("Trying to Mine block 1... ");
+		blockchain.get(0).mineBlock(difficulty);
+		
+		blockchain.add(new Block("Yo im the second block",blockchain.get(blockchain.size()-1).hash));
+		System.out.println("Trying to Mine block 2... ");
+		blockchain.get(1).mineBlock(difficulty);
+		
+		blockchain.add(new Block("Hey im the third block",blockchain.get(blockchain.size()-1).hash));
+		System.out.println("Trying to Mine block 3... ");
+		blockchain.get(2).mineBlock(difficulty);	
+		
+		System.out.println("\nBlockchain is Valid: " + isChainValid());
+		
+		String blockchainJson = new GsonBuilder().setPrettyPrinting().create().toJson(blockchain);
+		System.out.println("\nThe block chain: ");
+		System.out.println(blockchainJson);
+		*/
+		
+		//Setup Bouncey castle as a Security Provider
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+		
+		//Create the new wallets
+		walletA = new Wallet();
+		walletB = new Wallet();
+		Wallet coinbase = new Wallet();
+		
+		//create genesis transaction, which sends 100 NoobCoin to walletA: 
+		genesisTransaction = new Transaction(coinbase.publicKey, walletA.publicKey, 100f, null);
+		genesisTransaction.generateSignature(coinbase.privateKey);	 //manually sign the genesis transaction	
+		genesisTransaction.transactionId = "0"; //manually set the transaction id
+		genesisTransaction.outputs.add(new TransactionOutput(genesisTransaction.reciepient, genesisTransaction.value, genesisTransaction.transactionId)); //manually add the Transactions Output
+		UTXOs.put(genesisTransaction.outputs.get(0).id, genesisTransaction.outputs.get(0)); //its important to store our first transaction in the UTXOs list.
+		
+		System.out.println("Creating and Mining Genesis block... ");
+		Block genesis = new Block("0");
+		genesis.addTransaction(genesisTransaction);
+		addBlock(genesis);
+		
+		//testing
+		Block block1 = new Block(genesis.hash);
+		System.out.println("\nWalletA's balance is: " + walletA.getBalance());
+		System.out.println("\nWalletA is Attempting to send funds (40) to WalletB...");
+		block1.addTransaction(walletA.sendFunds(walletB.publicKey, 40f));
+		addBlock(block1);
+		System.out.println("\nWalletA's balance is: " + walletA.getBalance());
+		System.out.println("WalletB's balance is: " + walletB.getBalance());
+				
+		Block block2 = new Block(block1.hash);
+		System.out.println("\nWalletA Attempting to send more funds (1000) than it has...");
+		block2.addTransaction(walletA.sendFunds(walletB.publicKey, 1000f));
+		addBlock(block2);
+		System.out.println("\nWalletA's balance is: " + walletA.getBalance());
+		System.out.println("WalletB's balance is: " + walletB.getBalance());
+				
+		Block block3 = new Block(block2.hash);
+		System.out.println("\nWalletB is Attempting to send funds (20) to WalletA...");
+		block3.addTransaction(walletB.sendFunds( walletA.publicKey, 20));
+		System.out.println("\nWalletA's balance is: " + walletA.getBalance());
+		System.out.println("WalletB's balance is: " + walletB.getBalance());
+				
+		isChainValid();
+		
+		/*
+		//Test public and private keys
+		System.out.println("Private and public keys:");
+		System.out.println(StringUtil.getStringFromKey(walletA.privateKey));
+		System.out.println(StringUtil.getStringFromKey(walletA.publicKey));
+		//Create a test transaction from WalletA to walletB
+		Transaction transaction = new Transaction(walletA.publicKey, walletB.publicKey, 5, null);
+		transaction.generateSignature(walletA.privateKey);
+		//Verify the signature works and verify it from the public key
+		System.out.println("Is signature verified");
+		System.out.println(transaction.verifySignature());
+		*/
+	}
+	
+	public static Boolean isChainValid() {
+		Block currentBlock; 
+		Block previousBlock;
+		String hashTarget = new String(new char[difficulty]).replace('\0', '0');
+		
+		HashMap<String,TransactionOutput> tempUTXOs = new HashMap<String,TransactionOutput>(); //a temporary working list of unspent transactions at a given block state.
+		tempUTXOs.put(genesisTransaction.outputs.get(0).id, genesisTransaction.outputs.get(0));
+		
+		//loop through blockchain to check hashes:
+		for(int i=1; i < blockchain.size(); i++) {
+			currentBlock = blockchain.get(i);
+			previousBlock = blockchain.get(i-1);
+			//compare registered hash and calculated hash:
+			if(!currentBlock.hash.equals(currentBlock.calculateHash()) ){
+				System.out.println("Current Hashes not equal");			
+				return false;
+			}
+			//compare previous hash and registered previous hash
+			if(!previousBlock.hash.equals(currentBlock.previousHash) ) {
+				System.out.println("Previous Hashes not equal");
+				return false;
+			}
+			//check if hash is solved
+			if(!currentBlock.hash.substring( 0, difficulty).equals(hashTarget)) {
+				System.out.println("This block hasn't been mined");
+				return false;
+			}
+			
+			//loop thru blockchains transactions:
+			TransactionOutput tempOutput;
+			for(int t=0; t <currentBlock.transactions.size(); t++) {
+				Transaction currentTransaction = currentBlock.transactions.get(t);
+				
+				if(!currentTransaction.verifySignature()) {
+					System.out.println("#Signature on Transaction(" + t + ") is Invalid");
+					return false; 
+				}
+				if(currentTransaction.getInputsValue() != currentTransaction.getOutputsValue()) {
+					System.out.println("#Inputs are note equal to outputs on Transaction(" + t + ")");
+					return false; 
+				}
+				
+				for(TransactionInput input: currentTransaction.inputs) {	
+					tempOutput = tempUTXOs.get(input.transactionOutputId);
+					
+					if(tempOutput == null) {
+						System.out.println("#Referenced input on Transaction(" + t + ") is Missing");
+						return false;
+					}
+					
+					if(input.UTXO.value != tempOutput.value) {
+						System.out.println("#Referenced input Transaction(" + t + ") value is Invalid");
+						return false;
+					}
+					
+					tempUTXOs.remove(input.transactionOutputId);
+				}
+				
+				for(TransactionOutput output: currentTransaction.outputs) {
+					tempUTXOs.put(output.id, output);
+				}
+				
+				if( currentTransaction.outputs.get(0).reciepient != currentTransaction.reciepient) {
+					System.out.println("#Transaction(" + t + ") output reciepient is not who it should be");
+					return false;
+				}
+				if( currentTransaction.outputs.get(1).reciepient != currentTransaction.sender) {
+					System.out.println("#Transaction(" + t + ") output 'change' is not sender.");
+					return false;
+				}
+				
+			}
+			
+		}
+		System.out.println("Blockchain is valid");
+		return true;
+	}
+	
+	public static void addBlock(Block newBlock) {
+		newBlock.mineBlock(difficulty);
+		blockchain.add(newBlock);
+	}
+	
+	
+}
+
+<StringUtil class>
+
+package noobchain;
+import java.security.Key;
+import java.security.MessageDigest;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.util.ArrayList;
+import java.util.Base64;
+
+public class StringUtil {
+	//Applies Sha256 to a string and returns the result. 
+	public static String applySha256(String input){		
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-256");	        
+			//Applies sha256 to our input, 
+			byte[] hash = digest.digest(input.getBytes("UTF-8"));	        
+			StringBuffer hexString = new StringBuffer(); // This will contain hash as hexidecimal
+			for (int i = 0; i < hash.length; i++) {
+				String hex = Integer.toHexString(0xff & hash[i]);
+				if(hex.length() == 1) hexString.append('0');
+				hexString.append(hex);
+			}
+			return hexString.toString();
+		}
+		catch(Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	public static byte[] applyECDSASig(PrivateKey privateKey, String input) {
+		Signature dsa;
+		byte[] output = new byte[0];
+		try {
+			dsa = Signature.getInstance("ECDSA","BC");
+			dsa.initSign(privateKey);
+			byte[] strByte = input.getBytes();
+			dsa.update(strByte);
+			byte[] realSig = dsa.sign();
+			output = realSig;
+		} catch(Exception e ) {
+			throw new RuntimeException(e);
+		}
+		
+		return output;
+	}
+	
+	public static boolean verifyECDSASig(PublicKey publicKey, String data, byte[] signature) {
+	
+		try {
+			Signature ecdsaVerify = Signature.getInstance("ECDSA", "BC");
+			ecdsaVerify.initVerify(publicKey);
+			ecdsaVerify.update(data.getBytes());
+			return ecdsaVerify.verify(signature);
+		} catch(Exception e) {
+			throw new RuntimeException(e);
+		}
+		
+	}
+
+	public static String getStringFromKey(Key key) {
+		return Base64.getEncoder().encodeToString(key.getEncoded());
+	}
+	
+	//Returns difficulty string target, to compare to hash. eg difficulty of 5 will return "00000"  
+	public static String getDificultyString(int difficulty) {
+		return new String(new char[difficulty]).replace('\0', '0');
+	}
+	
+	public static String getMerkleRoot(ArrayList<Transaction> transactions) {
+		int count = transactions.size();
+		ArrayList<String> previousTreeLayer = new ArrayList<String>();
+		for(Transaction transaction : transactions) {
+			previousTreeLayer.add(transaction.transactionId);
+		}
+		ArrayList<String> treeLayer = previousTreeLayer;
+		while(count > 1) {
+			treeLayer = new ArrayList<String>();
+			for(int i=1; i < previousTreeLayer.size(); i++) {
+				treeLayer.add(applySha256(previousTreeLayer.get(i-1) + previousTreeLayer.get(i)));
+			}
+			count = treeLayer.size();
+			previousTreeLayer = treeLayer;
+		}
+		String merkleRoot = (treeLayer.size() == 1) ? treeLayer.get(0) : "";
+		return merkleRoot;
+	}
+}
+
+<Transaction class>
+
+package noobchain;
+import java.security.*;
+import java.util.ArrayList;
+
+public class Transaction {
+	public String transactionId;	//this is also the hash of the transaction.
+	public PublicKey sender;	//sneders address/public key.
+	public PublicKey reciepient; //Recipients address/public key.
+	public float value;
+	public byte[] signature;	//this is to prevent anybody else from spending funds in out wall
+	
+	public ArrayList<TransactionInput> inputs = new ArrayList<>();
+	public ArrayList<TransactionOutput> outputs = new ArrayList<>();
+	
+	private static int sequence = 0; // a rough count of how many transactions have been generation
+	
+	//Constructor
+	public Transaction(PublicKey from, PublicKey to, float value, ArrayList<TransactionInput> inputs) {
+		this.sender = from;
+		this.reciepient = to;
+		this.value = value;
+		this.inputs = inputs;
+	}
+	
+	//This Calculates the transaction hash (which will be used as its Id)
+	private String calulateHash() {
+		sequence++;	//increase the sequence to avoid 2 identical transactions having the sa..
+		return StringUtil.applySha256(
+					StringUtil.getStringFromKey(sender) +
+					StringUtil.getStringFromKey(reciepient) +
+					Float.toString(value) + sequence
+				
+				);
+	}
+	
+	public void generateSignature(PrivateKey privateKey) {
+		String data = StringUtil.getStringFromKey(sender) + StringUtil.getStringFromKey(reciepient) + Float.toString(value);
+		signature = StringUtil.applyECDSASig(privateKey, data);
+	}
+	
+	public boolean verifySignature() {
+		String data = StringUtil.getStringFromKey(sender) + StringUtil.getStringFromKey(reciepient) + Float.toString(value);
+		return StringUtil.verifyECDSASig(sender, data, signature);
+	}
+	
+	public boolean processTransaction() {
+		if(verifySignature() == false) {
+			System.out.println("#Transaction Signature failed to verify");
+			return false;
+		}
+		
+		//gather transaction inputs (Make sure they are unspent):
+		for(TransactionInput i : inputs) {
+			i.UTXO = NoobChain.UTXOs.get(i.transactionOutputId);
+		}
+		
+		//check if transaction is valid:
+		if(getInputsValue() < NoobChain.minimumTransaction) {
+			System.out.println("#Transaction Inputs to small: " + getInputsValue());
+			return false;
+		}
+		
+		//generate transaction outputs:
+		float leftOver = getInputsValue() - value; //get value of inputs then the left over change:
+		transactionId = calulateHash();
+		outputs.add(new TransactionOutput(this.reciepient, value, transactionId)); //send value to recipient
+		outputs.add(new TransactionOutput(this.sender, leftOver, transactionId)); //send the left over 'change' back to sender
+		
+		//add outputs to Unspent list
+		for(TransactionOutput o : outputs) {
+			NoobChain.UTXOs.put(o.id, o);
+		}
+		
+		//remove transaction inputs from UTXO lists as spent:
+		for(TransactionInput i : inputs) {
+			if(i.UTXO == null) continue; //if Transaction can't be found skip it
+			NoobChain.UTXOs.remove(i.UTXO.id);
+		}
+		
+		return true;
+	}
+	
+	//returns sum of inputs(UTXOs) values
+	public float getInputsValue() {
+		float total = 0;
+		for(TransactionInput i : inputs) {
+			if(i.UTXO == null) continue; //if Transaction can't be found skip it
+			total += i.UTXO.value;
+		}
+		return total;
+	}
+	
+	//returns sum of outputs:
+	public float getOutputsValue() {
+		float total = 0;
+		for(TransactionOutput o : outputs) {
+			total += o.value;
+		}
+		return total;
+	}
+	
+}
+
+<TransactionInput class>
+
+package noobchain;
+
+public class TransactionInput {
+	public String transactionOutputId;	//Reference to TransactionOutputs -> transactionId
+	public TransactionOutput UTXO;	//Contains the Unspent transaction output
+	
+	public TransactionInput(String transactionOutputId) {
+		this.transactionOutputId = transactionOutputId;
+	}
+}
+
+<TransactionOutput class>
+
+package noobchain;
+import java.security.PublicKey;
+
+public class TransactionOutput {
+	public String id;
+	public PublicKey reciepient; //also known as the new owner of these coins.
+	public float value;	//the amount of coins they own
+	public String parentTransactionId;	//the id of the transaction this output was created in
+	
+	//Constructor
+	public TransactionOutput(PublicKey reciepient, float value, String parentTransactionId) {
+		this.reciepient = reciepient;
+		this.value = value;
+		this.parentTransactionId = parentTransactionId;
+		this.id = StringUtil.applySha256(StringUtil.getStringFromKey(reciepient) + Float.toString(value) + parentTransactionId);
+	}
+	
+	//Check if coin belongs to you
+	public boolean isMine(PublicKey publicKey) {
+		return (publicKey == reciepient);
+	}
+	
+}
+
+<Wallet class>
+
+package noobchain;
+
+import java.security.*;
+import java.security.spec.ECGenParameterSpec;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Wallet {
+	public PrivateKey privateKey;
+	public PublicKey publicKey;
+	
+	public HashMap<String,TransactionOutput> UTXOs = new HashMap<String,TransactionOutput>();
+	
+	public Wallet() {
+		generateKeyPair();
+	}
+	
+	public void generateKeyPair() {
+		try {
+			KeyPairGenerator keyGen = KeyPairGenerator.getInstance("ECDSA", "BC");
+			SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
+			ECGenParameterSpec ecSpec = new ECGenParameterSpec("prime192v1");
+			//Initialize the key generator and generate a KeyPair
+			keyGen.initialize(ecSpec, random);	//256 bytes provides an acceptable security 
+			KeyPair keyPair = keyGen.generateKeyPair();
+			// Set the public and private keys from the keyPair
+			privateKey = keyPair.getPrivate();
+			publicKey = keyPair.getPublic();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	public float getBalance() {
+		float total = 0;	
+        for (Map.Entry<String, TransactionOutput> item: NoobChain.UTXOs.entrySet()){
+        	TransactionOutput UTXO = item.getValue();
+            if(UTXO.isMine(publicKey)) { //if output belongs to me ( if coins belong to me )
+            	UTXOs.put(UTXO.id,UTXO); //add it to our list of unspent transactions.
+            	total += UTXO.value ; 
+            }
+        }  
+		return total;
+	}
+	
+	public Transaction sendFunds(PublicKey _recipient,float value ) {
+		if(getBalance() < value) {
+			System.out.println("#Not Enough funds to send transaction. Transaction Discarded.");
+			return null;
+		}
+		ArrayList<TransactionInput> inputs = new ArrayList<TransactionInput>();
+		
+		float total = 0;
+		for (Map.Entry<String, TransactionOutput> item: UTXOs.entrySet()){
+			TransactionOutput UTXO = item.getValue();
+			total += UTXO.value;
+			inputs.add(new TransactionInput(UTXO.id));
+			if(total > value) break;
+		}
+		
+		Transaction newTransaction = new Transaction(publicKey, _recipient , value, inputs);
+		newTransaction.generateSignature(privateKey);
+		
+		for(TransactionInput input: inputs){
+			UTXOs.remove(input.transactionOutputId);
+		}
+		
+		return newTransaction;
+	}
+	
+}
+
+<결과화면>
+
+
+
+
